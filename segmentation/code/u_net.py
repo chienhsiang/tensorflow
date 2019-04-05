@@ -12,7 +12,7 @@ from tensorflow.keras import models, layers, losses
 
 
 """
-Define layers and model
+Define Layers
 """
 class Conv_block(layers.Layer):
     def __init__(self, num_filters, name='conv_block'):
@@ -67,6 +67,9 @@ class Decoder(layers.Layer):
         return x
 
 
+"""
+Define model
+"""
 class Unet(models.Model):
     def __init__(self, n_filters_list, name='u_net'):
         assert type(n_filters_list) is list, "n_filters_list must be a list"
@@ -106,7 +109,7 @@ class Unet(models.Model):
 
 
 """
-Loss function
+Loss functions
 """
 def dice_coeff(y_true, y_pred):
     smooth = 1.
@@ -117,8 +120,10 @@ def dice_coeff(y_true, y_pred):
     score = (2. * intersect + smooth) / (tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) + smooth)
     return score
 
+
 def dice_loss(y_true, y_pred):
     return 1 - dice_coeff(y_true, y_pred)
+
 
 def bce_dice_loss(y_true, y_pred):
     loss = losses.binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
@@ -126,10 +131,10 @@ def bce_dice_loss(y_true, y_pred):
 
 
 # Get model
-def get_model(num_filters_list=[32, 64, 128, 256, 512], compiled=True,
-			  optimizer='adam', loss='bce_dice_loss',
-			  metrics=[dice_loss]):
-	model = Unet(num_filters_list)
-	if compiled:
-		model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-	return model
+# def get_model(num_filters_list=[32, 64, 128, 256, 512], compiled=True,
+# 			  optimizer='adam', loss=bce_dice_loss,
+# 			  metrics=[dice_loss]):
+# 	model = Unet(num_filters_list)
+# 	if compiled:
+# 		model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+# 	return model

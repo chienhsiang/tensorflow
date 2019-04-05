@@ -4,7 +4,6 @@ __author__ = 'Chien-Hsiang Hsu'
 __create_date__ = '2019.04.05'
 
 
-
 import functools
 import tensorflow as tf
 
@@ -16,7 +15,7 @@ MAX_INTENSITY = 4095.
 def _get_image_from_path(img_path, mask_path):
     img = tf.image.decode_png(tf.io.read_file(img_path), channels=1, dtype=tf.uint16)
     img = tf.image.convert_image_dtype(tf.cast(img, tf.float32) / MAX_INTENSITY, tf.uint8)
-    mask = tf.image.decode_jpeg(tf.io.read_file(mask_path), channels=1)
+    mask = tf.image.decode_png(tf.io.read_file(mask_path), channels=1, dtype=tf.uint8)
     
     # Remove bounday 100 pixels since masks touching boundaries were removed
     w = 100
@@ -81,7 +80,6 @@ def _augment(img, mask, resize=None, scale=1., crop_size=None, to_flip=False):
     mask = tf.cast(mask, tf.float32) * scale
     
     return img, mask
-
 
 
 """
