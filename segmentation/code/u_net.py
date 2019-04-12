@@ -71,9 +71,9 @@ class Decoder(layers.Layer):
 Define model
 """
 class Unet(models.Model):
-    def __init__(self, n_filters_list, name='u_net'):
+    def __init__(self, n_filters_list, name='u_net', dynamic=True, **kwargs):
         assert type(n_filters_list) is list, "n_filters_list must be a list"
-        super().__init__(name=name)
+        super().__init__(name=name, dynamic=dynamic, **kwargs)
         self.conv_block_center = Conv_block(n_filters_list[-1] * 2)
         self.conv_block_final = Conv_block(n_filters_list[0])
         self.con2d_1x1 = layers.Conv2D(1, (1, 1), activation='sigmoid')        
