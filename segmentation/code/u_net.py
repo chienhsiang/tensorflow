@@ -10,6 +10,8 @@ __create_date__ = '2019.04.05'
 import tensorflow as tf
 from tensorflow.keras import models, layers, losses
 
+import numpy as np
+import cv2
 
 """
 Define Layers
@@ -130,11 +132,64 @@ def bce_dice_loss(y_true, y_pred):
     return loss
 
 
+"""
+Pixel weight
+"""
+def balancing_weight_tf(mask):
+    """mask is a tensor"""
+    mask = tf.cast(mask, tf.bool)
+    n_ones = tf.math.count_nonzero(mask, dtype=tf.int32)
+    n_zeros = tf.size(mask, out_type=tf.int32) - n_ones
+    x = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_ones, tf.float32)
+    y = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_zeros, tf.float32)
+    wc = tf.where(mask, x, y)
+    wc = wc / tf.reduce_min(wc)
+    
+    return wc
+
+
+def distance_weight(mask, w0=10, sigma=1):
+    """mask is a numpy array"""
+    
+    # bw2label
+    n_objs, lbl = cv2.connectedComponents(mask.astype(np.uint8))
+    
+    # compute distance to each object for every pixel
+    H, W = mask.shape
+    D = np.zeros([H, W, n_objs])
+    
+    for i in range(1, n_objs+1):
+        bw = np.uint8(lbl==i)
+        D[:,:,i-1] = cv2.distanceTransform(1-bw, cv2.DIST_L2, 3)
+        
+    D.sort(axis=-1)
+    weight = w0 * np.exp(-0.5 * (np.sum(D[:,:,:2], axis=-1)**2) / (sigma**2))
+    
+    return np.float32(weight)
+
+
+def get_pixel_weights(mask, **kwargs):
+    """mask is a tensor"""
+    
+    mask = tf.squeeze(mask, axis=-1)
+    wc = balancing_weight_tf(mask)
+    dw = distance_weight(mask.numpy(), **kwargs)
+
+    return wc + dw
+
+
+def weighted_loss(y_true, y_pred):
+    w = tf.map_fn(get_pixel_weights, y_true, tf.float32)
+    loss = losses.binary_crossentropy(y_true, y_pred) * w
+
+    return loss + dice_loss(y_true, y_pred)
+
+
 # Get model
 # def get_model(num_filters_list=[32, 64, 128, 256, 512], compiled=True,
-# 			  optimizer='adam', loss=bce_dice_loss,
-# 			  metrics=[dice_loss]):
-# 	model = Unet(num_filters_list)
-# 	if compiled:
-# 		model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-# 	return model
+#             optimizer='adam', loss=bce_dice_loss,
+#             metrics=[dice_loss]):
+#   model = Unet(num_filters_list)
+#   if compiled:
+#       model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+#   return model
