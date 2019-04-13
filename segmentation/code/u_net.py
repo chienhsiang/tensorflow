@@ -178,8 +178,8 @@ def get_pixel_weights(mask, **kwargs):
     return wc + dw
 
 
-def weighted_loss(y_true, y_pred):
-    w = tf.map_fn(get_pixel_weights, y_true, tf.float32)
+def weighted_loss(y_true, y_pred, **kwargs):
+    w = tf.map_fn(lambda x: get_pixel_weights(x, **kwargs), y_true, tf.float32)
     loss = losses.binary_crossentropy(y_true, y_pred) * w
 
     return loss + dice_loss(y_true, y_pred)
