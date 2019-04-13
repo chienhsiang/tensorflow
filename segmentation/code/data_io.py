@@ -25,63 +25,6 @@ def _get_image_from_path(img_path, mask_path):
     return img, mask
 
 
-# """
-# Pixel weight
-# """
-# def balancing_weight_tf(mask):
-#     """mask is a tensor"""
-#     mask = tf.cast(mask, tf.bool)
-#     n_ones = tf.math.count_nonzero(mask, dtype=tf.int32)
-#     n_zeros = tf.size(mask, out_type=tf.int32) - n_ones
-#     x = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_ones, tf.float32)
-#     y = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_zeros, tf.float32)
-#     wc = tf.where(mask, x, y)
-#     wc = wc / tf.reduce_min(wc)
-    
-#     return wc
-
-
-# def distance_weight(mask, w0=10, sigma=1):
-#     """mask is a numpy array"""
-    
-#     # bw2label
-#     n_objs, lbl = cv2.connectedComponents(mask.astype(np.uint8))
-    
-#     # compute distance to each object for every pixel
-#     H, W = mask.shape
-#     D = np.zeros([H, W, n_objs])
-    
-#     for i in range(1, n_objs+1):
-#         bw = np.uint8(lbl==i)
-#         D[:,:,i-1] = cv2.distanceTransform(1-bw, cv2.DIST_L2, 3)
-        
-#     D.sort(axis=-1)
-#     weight = w0 * np.exp(-0.5 * (np.sum(D[:,:,:2], axis=-1)**2) / (sigma**2))
-    
-#     return np.float32(weight)
-
-
-# def get_pixel_weights(mask, **kwargs):
-#     """mask is a tensor"""
-    
-#     mask = tf.squeeze(mask, axis=-1)
-#     wc = balancing_weight_tf(mask)
-#     # dw = wc
-#     dw = tf.numpy_function(lambda x: distance_weight(x, **kwargs), [mask], tf.float32)
-
-#     return tf.expand_dims(wc + dw, axis=-1)
-
-
-# def concat_weight(img, mask, **kwargs):
-#     mask = tf.concat([tf.cast(mask, tf.float32), 
-#                       get_pixel_weights(mask, **kwargs)], axis=-1)
-#     # mask = tf.map_fn(lambda x: tf.concat([tf.cast(x, tf.float32), 
-#     #                                       get_pixel_weights(x, **kwargs)], axis=-1), 
-#     #                  mask, dtype=tf.float32)
-        
-#     return img, mask
-
-
 """
 Data augmentation
 """
@@ -155,4 +98,62 @@ def get_dataset(img_paths, mask_paths, preproc_fn=functools.partial(_augment),
     
     dataset = dataset.repeat().batch(batch_size)
     
-    return dataset  
+    return dataset
+
+
+# """
+# Pixel weight
+# """
+# def balancing_weight_tf(mask):
+#     """mask is a tensor"""
+#     mask = tf.cast(mask, tf.bool)
+#     n_ones = tf.math.count_nonzero(mask, dtype=tf.int32)
+#     n_zeros = tf.size(mask, out_type=tf.int32) - n_ones
+#     x = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_ones, tf.float32)
+#     y = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_zeros, tf.float32)
+#     wc = tf.where(mask, x, y)
+#     wc = wc / tf.reduce_min(wc)
+    
+#     return wc
+
+
+# def distance_weight(mask, w0=10, sigma=1):
+#     """mask is a numpy array"""
+    
+#     # bw2label
+#     n_objs, lbl = cv2.connectedComponents(mask.astype(np.uint8))
+    
+#     # compute distance to each object for every pixel
+#     H, W = mask.shape
+#     D = np.zeros([H, W, n_objs])
+    
+#     for i in range(1, n_objs+1):
+#         bw = np.uint8(lbl==i)
+#         D[:,:,i-1] = cv2.distanceTransform(1-bw, cv2.DIST_L2, 3)
+        
+#     D.sort(axis=-1)
+#     weight = w0 * np.exp(-0.5 * (np.sum(D[:,:,:2], axis=-1)**2) / (sigma**2))
+    
+#     return np.float32(weight)
+
+
+# def get_pixel_weights(mask, **kwargs):
+#     """mask is a tensor"""
+    
+#     mask = tf.squeeze(mask, axis=-1)
+#     wc = balancing_weight_tf(mask)
+#     # dw = wc
+#     dw = tf.numpy_function(lambda x: distance_weight(x, **kwargs), [mask], tf.float32)
+
+#     return tf.expand_dims(wc + dw, axis=-1)
+
+
+# def concat_weight(img, mask, **kwargs):
+#     mask = tf.concat([tf.cast(mask, tf.float32), 
+#                       get_pixel_weights(mask, **kwargs)], axis=-1)
+#     # mask = tf.map_fn(lambda x: tf.concat([tf.cast(x, tf.float32), 
+#     #                                       get_pixel_weights(x, **kwargs)], axis=-1), 
+#     #                  mask, dtype=tf.float32)
+        
+#     return img, mask
+
