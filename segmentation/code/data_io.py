@@ -12,10 +12,10 @@ MAX_INTENSITY = 4095.
 
 
 # Get image and mask from path name
-def _get_image_from_path(img_path, mask_path):
-    img = tf.image.decode_png(tf.io.read_file(img_path), channels=1, dtype=tf.uint16)
-    img = tf.image.convert_image_dtype(tf.cast(img, tf.float32) / MAX_INTENSITY, tf.uint8)
-    mask = tf.image.decode_png(tf.io.read_file(mask_path), channels=1, dtype=tf.uint8)
+def _get_image_from_path(img_path, mask_path, max_level=MAX_INTENSITY, channels=1):
+    img = tf.image.decode_png(tf.io.read_file(img_path), channels=channels, dtype=tf.uint16)
+    img = tf.image.convert_image_dtype(tf.cast(img, tf.float32) / max_level, tf.uint8)
+    mask = tf.image.decode_png(tf.io.read_file(mask_path), channels=channels, dtype=tf.uint8)
     
     # Remove bounday 100 pixels since masks touching boundaries were removed
     w = 100
@@ -86,10 +86,11 @@ def _augment(img, mask, resize=None, scale=1., crop_size=None, to_flip=False):
 """
 Input pipeline
 """
-def get_dataset(img_paths, mask_paths, preproc_fn=functools.partial(_augment),
+def get_dataset(img_paths, mask_paths, read_img_fn=functools.partial(_get_image_from_path),
+                preproc_fn=functools.partial(_augment),
                 shuffle=False, batch_size=1, threads=AUTOTUNE):
     dataset = tf.data.Dataset.from_tensor_slices((img_paths, mask_paths))
-    dataset = dataset.map(_get_image_from_path, num_parallel_calls=threads)
+    dataset = dataset.map(read_img_fn, num_parallel_calls=threads)
     dataset = dataset.map(preproc_fn, num_parallel_calls=threads)
     
     if shuffle:
