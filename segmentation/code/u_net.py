@@ -163,8 +163,10 @@ def distance_weight(mask, w0=10, sigma=1):
         D[:,:,i-1] = cv2.distanceTransform(1-bw, cv2.DIST_L2, 3)
         
     D.sort(axis=-1)
+
     weight = w0 * np.exp(-0.5 * (np.sum(D[:,:,:2], axis=-1)**2) / (sigma**2))
-    
+    weight[lbl>0] = 0
+
     return np.float32(weight)
 
 
@@ -182,7 +184,7 @@ def weighted_loss(y_true, y_pred, **kwargs):
     w = tf.map_fn(lambda x: get_pixel_weights(x, **kwargs), y_true, tf.float32)
     loss = losses.binary_crossentropy(y_true, y_pred) * w
 
-    return loss + dice_loss(y_true, y_pred)
+    return loss #+ dice_loss(y_true, y_pred)
 
 
 # Get model
