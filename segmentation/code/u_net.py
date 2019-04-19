@@ -137,7 +137,7 @@ def bce_dice_loss(y_true, y_pred):
     loss = losses.binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
     return loss
 
-def weighted_cce_loss(y_true, y_pred, nuc_ch=1, cell_ch=0, **kwargs):
+def weighted_cce_loss(y_true, y_pred, **kwargs):
     """y_true is one-hot code"""
 
     # class balance
@@ -152,15 +152,18 @@ def weighted_cce_loss(y_true, y_pred, nuc_ch=1, cell_ch=0, **kwargs):
     cb = cb / cb_max 
 
     # distance weight
-    nuc_dw = tf.map_fn(lambda x: distance_weight(x.numpy()[...,nuc_ch], **kwargs), y_true, tf.float32)
+    nuc_ch = kwargs['nuc_ch']
+    cell_ch = kwargs['cell_ch']
+    sub_kw = {k: kwargs[k] for k in ['w0', 'sigma']}
+    nuc_dw = tf.map_fn(lambda x: distance_weight(x.numpy()[...,nuc_ch], **sub_kw), y_true, tf.float32)
     cell_dw = tf.map_fn(lambda x: distance_weight(x.numpy()[...,[nuc_ch, cell_ch]].sum(axis=-1), 
-                                                  **kwargs), 
+                                                  **sub_kw), 
                         y_true, tf.float32)
 
     weight = cb + nuc_dw + cell_dw
     loss = losses.categorical_crossentropy(y_true, y_pred) * weight
-    
-    return loss, cb, nuc_dw, cell_dw
+
+    return loss
 
 
 """
