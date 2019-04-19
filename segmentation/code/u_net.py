@@ -73,12 +73,18 @@ class Decoder(layers.Layer):
 Define model
 """
 class Unet(models.Model):
-    def __init__(self, n_filters_list, name='u_net', dynamic=True, **kwargs):
+    def __init__(self, n_filters_list, n_classes=2, name='u_net', dynamic=True, **kwargs):
         assert type(n_filters_list) is list, "n_filters_list must be a list"
         super().__init__(name=name, dynamic=dynamic, **kwargs)
         self.conv_block_center = Conv_block(n_filters_list[-1] * 2)
         self.conv_block_final = Conv_block(n_filters_list[0])
-        self.con2d_1x1 = layers.Conv2D(1, (1, 1), activation='sigmoid')        
+
+        # output layer
+        assert n_classes >= 2, "Output classes must >= 2"
+        if n_classes == 2:
+            self.con2d_1x1 = layers.Conv2D(1, (1, 1), activation='sigmoid')
+        else:
+            self.con2d_1x1 = layers.Conv2D(n_classes, (1, 1), activation='softmax')
         
         self.encoders = [Encoder(n_filters) for n_filters in n_filters_list]
         self.decoders = [Decoder(n_filters) for n_filters in reversed(n_filters_list)]
@@ -130,6 +136,11 @@ def dice_loss(y_true, y_pred):
 def bce_dice_loss(y_true, y_pred):
     loss = losses.binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
     return loss
+
+def cce_loss(y_true, y_pred):
+    loss = losses.categorical_crossentropy(y_true[:,:,:,1:], y_pred[:,:,:,1:])
+    return loss
+
 
 
 """
