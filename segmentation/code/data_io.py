@@ -8,14 +8,12 @@ import functools
 import tensorflow as tf
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-MAX_INTENSITY = 4095.
 
 
 # Get image and mask from path name
-def _get_image_from_path(img_path, mask_path, max_level=MAX_INTENSITY, channels=1):
-    img = tf.image.decode_png(tf.io.read_file(img_path), channels=channels, dtype=tf.uint16)
-    img = tf.image.convert_image_dtype(tf.cast(img, tf.float32) / max_level, tf.uint8)
-    mask = tf.image.decode_png(tf.io.read_file(mask_path), channels=channels, dtype=tf.uint8)
+def _get_image_from_path(img_path, mask_path, channels=1, dtype=tf.uint8):
+    img = tf.image.decode_png(tf.io.read_file(img_path), channels=channels, dtype=dtype)
+    mask = tf.image.decode_png(tf.io.read_file(mask_path), channels=channels, dtype=dtype)
     
     # Remove bounday 100 pixels since masks touching boundaries were removed
     w = 100
@@ -52,10 +50,11 @@ def random_crop(img, mask, size=[500, 700]):
     if size is not None:
         assert len(size) == 2, "size must have 2 elments"
 
-        # Combine image and maks then crop
+        # Combine image and mask then crop
         comb = tf.concat([img, mask], axis=2)
-        crop_size = comb.shape.as_list()
+        crop_size = comb.shape.as_list()        
         crop_size[:2] = size
+        # size.append(comb.shape[2])
         comb = tf.image.random_crop(comb, size=crop_size)
 
         # Take out copped image and mask
