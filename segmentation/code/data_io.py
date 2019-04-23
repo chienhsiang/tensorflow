@@ -4,21 +4,45 @@ __author__ = 'Chien-Hsiang Hsu'
 __create_date__ = '2019.04.05'
 
 
+import os
+import glob
+import re
 import functools
 import tensorflow as tf
+from sklearn.model_selection import train_test_split
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
+def get_data_filenames(img_dir, mask_dir, img_file_pattern, mask_file_pattern, remove_pattern,
+                       test_size=0.2, random_state=None, **kwargs):
+    # Get image amsk file names
+    
+    x_train_fnames = sorted(glob.glob(os.path.join(img_dir, img_file_pattern))) 
+    y_train_fnames = sorted(glob.glob(os.path.join(mask_dir, mask_file_pattern))) 
+
+    if remove_pattern is not None:
+        pattern = re.compile(remove_pattern)
+        x_train_fnames = [f for f in x_train_fnames if not pattern.search(f)]
+        y_train_fnames = [f for f in y_train_fnames if not pattern.search(f)]
+
+    # Split into training and validation
+    x_train_fnames, x_val_fnames, y_train_fnames, y_val_fnames = \
+        train_test_split(x_train_fnames, y_train_fnames, test_size=test_size, random_state=random_state)
+    
+    return x_train_fnames, x_val_fnames, y_train_fnames, y_val_fnames
+
+
 # Get image and mask from path name
-def _get_image_from_path(img_path, mask_path, channels=1, dtype=tf.uint8):
+def _get_image_from_path(img_path, mask_path, channels=1, dtype='uint8', crop_bd_width=100):
     img = tf.image.decode_png(tf.io.read_file(img_path), channels=channels, dtype=dtype)
     mask = tf.image.decode_png(tf.io.read_file(mask_path), channels=channels, dtype=dtype)
     
     # Remove bounday 100 pixels since masks touching boundaries were removed
-    w = 100
-    img = img[w:-w,w:-w,:]
-    mask = mask[w:-w,w:-w,:]
+    if crop_bd_width > 0:
+        w = crop_bd_width
+        img = img[w:-w,w:-w,:]
+        mask = mask[w:-w,w:-w,:]
     
     return img, mask
 
