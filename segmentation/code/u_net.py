@@ -177,12 +177,12 @@ def balancing_weight_tf(mask):
     x = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_ones, tf.float32)
     y = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_zeros, tf.float32)
     wc = tf.where(mask, x, y)
-    wc = wc / tf.reduce_min(wc)
+    wc = wc / tf.reduce_max(wc)
     
     return wc
 
 
-def distance_weight(mask, w0=10, sigma=1):
+def distance_weight(mask, w0=10, sigma=1, **kwargs):
     """mask is a numpy array"""
     
     # bw2label
@@ -218,7 +218,7 @@ def weighted_loss(y_true, y_pred, **kwargs):
     w = tf.map_fn(lambda x: get_pixel_weights(x, **kwargs), y_true, tf.float32)
     loss = losses.binary_crossentropy(y_true, y_pred) * w
 
-    return loss #+ dice_loss(y_true, y_pred)
+    return loss
 
 
 # Get model

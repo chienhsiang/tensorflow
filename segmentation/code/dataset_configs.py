@@ -14,6 +14,20 @@ mask_subfolder = 'masks'
 def get_dataset_config(task):
     cfg = None
 
+    if task == 'incucyte_nucleus':
+        cfg = {
+            'data_folder': '2019028023_PC9_A549_with_nuclear_marker',
+            'img_file_pattern': '*.png',
+            'mask_file_pattern': '*.png', # merged masks, green: nucleus, red: cell
+            'remove_pattern': '_[A-Z]([23]|11)_',
+
+            'crop_bd_width': 0, # pixel width to remove from boundary
+
+            'n_channels': 1,
+            'dtype': 'uint8',
+            'batch_size': 5
+        }
+
     if task == 'both_seg':
         cfg = {
             'data_folder': 'p2017017086_ki67_merge',

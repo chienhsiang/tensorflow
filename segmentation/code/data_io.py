@@ -23,8 +23,8 @@ def get_data_filenames(img_dir, mask_dir, img_file_pattern, mask_file_pattern, r
 
     if remove_pattern is not None:
         pattern = re.compile(remove_pattern)
-        x_train_fnames = [f for f in x_train_fnames if not pattern.search(f)]
-        y_train_fnames = [f for f in y_train_fnames if not pattern.search(f)]
+        x_train_fnames = [f for f in x_train_fnames if not pattern.search(os.path.basename(f))]
+        y_train_fnames = [f for f in y_train_fnames if not pattern.search(os.path.basename(f))]
 
     # Split into training and validation
     x_train_fnames, x_val_fnames, y_train_fnames, y_val_fnames = \
