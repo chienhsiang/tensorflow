@@ -19,7 +19,7 @@ def get_dataset_config(task):
             'data_folder': '2019028023_PC9_A549_with_nuclear_marker',
             'img_file_pattern': '*.png',
             'mask_file_pattern': '*.png', # merged masks, green: nucleus, red: cell
-            'remove_pattern': '_[A-Z]([23]|11)_',
+            'match_pattern': '_[A-Z]([23]|11)_',
 
             'crop_bd_width': 0, # pixel width to remove from boundary
 
@@ -33,7 +33,7 @@ def get_dataset_config(task):
             'data_folder': 'p2017017086_ki67_merge',
             'img_file_pattern': '*.png',
             'mask_file_pattern': '*.png', # merged masks, green: nucleus, red: cell
-            'remove_pattern': '_[A-Z]2_',
+            'match_pattern': '_[A-Z]2_',
 
             'crop_bd_width': 100, # pixel width to remove from boundary
 
@@ -48,7 +48,7 @@ def get_dataset_config(task):
             'data_folder': 'plate_2017017086_ki67',
             'img_file_pattern': '*-2.png',
             'mask_file_pattern': '*_nucleus.png',
-            'remove_pattern': '_[A-Z]2_',
+            'match_pattern': '_[A-Z]2_',
 
             'crop_bd_width': 100, # pixel width to remove from boundary
 
@@ -63,7 +63,7 @@ def get_dataset_config(task):
             'data_folder': 'plate_2017017086_ki67',
             'img_file_pattern': '*-3.png',
             'mask_file_pattern': '*_cell.png',
-            'remove_pattern': '_[A-Z]2_',
+            'match_pattern': '_[A-Z]2_',
 
             'crop_bd_width': 100, # pixel width to remove from boundary
 

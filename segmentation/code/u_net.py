@@ -176,9 +176,9 @@ def balancing_weight_tf(mask):
     n_zeros = tf.size(mask, out_type=tf.int32) - n_ones
     x = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_ones, tf.float32)
     y = tf.ones_like(mask, dtype=tf.float32) / tf.cast(n_zeros, tf.float32)
-    wc = tf.where(mask, x, y)
+    wc = tf.where(mask, x, y) 
     wc = wc / tf.reduce_max(wc)
-    
+
     return wc
 
 

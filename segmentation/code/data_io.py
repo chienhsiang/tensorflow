@@ -14,17 +14,26 @@ from sklearn.model_selection import train_test_split
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-def get_data_filenames(img_dir, mask_dir, img_file_pattern, mask_file_pattern, remove_pattern,
-                       test_size=0.2, random_state=None, **kwargs):
-    # Get image amsk file names
+def get_filenames(file_dir, file_type, filter_pattern):
+    """ Get file names 
+        file_type: e.g. '*.png'
+        filter_pattern: regular expression of file name to keep
+    """
     
-    x_train_fnames = sorted(glob.glob(os.path.join(img_dir, img_file_pattern))) 
-    y_train_fnames = sorted(glob.glob(os.path.join(mask_dir, mask_file_pattern))) 
+    fnames = sorted(glob.glob(os.path.join(file_dir, file_type))) 
 
-    if remove_pattern is not None:
-        pattern = re.compile(remove_pattern)
-        x_train_fnames = [f for f in x_train_fnames if not pattern.search(os.path.basename(f))]
-        y_train_fnames = [f for f in y_train_fnames if not pattern.search(os.path.basename(f))]
+    if filter_pattern is not None:
+        pattern = re.compile(filter_pattern)
+        fnames = [f for f in fnames if pattern.search(os.path.basename(f))]       
+    
+    return fnames
+
+
+def get_data_filenames(img_dir, mask_dir, img_file_pattern, mask_file_pattern, match_pattern,
+                       test_size=0.2, random_state=None, **kwargs):
+    # Get image mask file names
+    x_train_fnames = get_filenames(img_dir, img_file_pattern, match_pattern)
+    y_train_fnames = get_filenames(mask_dir, mask_file_pattern, match_pattern)
 
     # Split into training and validation
     x_train_fnames, x_val_fnames, y_train_fnames, y_val_fnames = \
