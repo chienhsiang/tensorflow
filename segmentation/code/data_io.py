@@ -45,17 +45,25 @@ def get_data_filenames(img_dir, mask_dir, img_file_pattern, mask_file_pattern, m
 
 
 # Get image and mask from path name
-def _get_image_from_path(img_path, mask_path, channels=1, dtype='uint8', crop_bd_width=100):
+def _get_image_from_path(img_path, channels=1, dtype='uint8', crop_bd_width=0, 
+                         resize=None, scale=1.):
+    # Read image
     img = tf.image.decode_png(tf.io.read_file(img_path), channels=channels, dtype=dtype)
-    mask = tf.image.decode_png(tf.io.read_file(mask_path), channels=channels, dtype=dtype)
     
     # Remove bounday 100 pixels since masks touching boundaries were removed
     if crop_bd_width > 0:
         w = crop_bd_width
         img = img[w:-w,w:-w,:]
         mask = mask[w:-w,w:-w,:]
+
+    # Resize 
+    if resize is not None:
+        img = tf.image.resize(img, size=resize)
+
+    # Scale the intensity
+    img = tf.cast(img, tf.float32) * scale
     
-    return img, mask
+    return img
 
 
 """
@@ -101,18 +109,10 @@ def random_crop(img, mask, size=[500, 700]):
 
 
 # Assembled augmentation function
-def _augment(img, mask, resize=None, scale=1., crop_size=None, to_flip=False):
-    if resize is not None:
-        img = tf.image.resize(img, size=resize)
-        mask = tf.image.resize(mask, size=resize)
-    
+def _augment(img, mask, crop_size=None, to_flip=False):
     # Crop and flip
     img, mask = random_crop(img, mask, size=crop_size)
-    img, mask = flip_images(to_flip, img, mask)
-    
-    # Scale the intensity
-    img = tf.cast(img, tf.float32) * scale
-    mask = tf.cast(mask, tf.float32) * scale
+    img, mask = flip_images(to_flip, img, mask)    
     
     return img, mask
 
@@ -122,18 +122,24 @@ Input pipeline
 """
 def get_dataset(img_paths, mask_paths, read_img_fn=functools.partial(_get_image_from_path),
                 preproc_fn=functools.partial(_augment),
-                shuffle=False, batch_size=1, threads=AUTOTUNE):
-    dataset = tf.data.Dataset.from_tensor_slices((img_paths, mask_paths))
+                shuffle=False, repeat=True, batch_size=1, threads=AUTOTUNE):
+    dataset = tf.data.Dataset.from_tensor_slices(img_paths)
     dataset = dataset.map(read_img_fn, num_parallel_calls=threads)
-    dataset = dataset.map(preproc_fn, num_parallel_calls=threads)
+
+    if mask_paths is not None:
+        mask_dataset = tf.data.Dataset.from_tensor_slices(mask_paths)
+        mask_dataset = mask_dataset.map(read_img_fn, num_parallel_calls=threads)
+        dataset = tf.data.Dataset.zip((dataset, mask_dataset))
+        dataset = dataset.map(preproc_fn, num_parallel_calls=threads)
     
     if shuffle:
         n_samples = len(img_paths)
         dataset = dataset.shuffle(n_samples)
+
+    if repeat:
+        dataset = dataset.repeat()
     
-    dataset = dataset.repeat().batch(batch_size)
-    
-    return dataset
+    return dataset.batch(batch_size)
 
 
 """
@@ -144,7 +150,7 @@ def overlay_mask(I, M, M_pred, true_color=(0,255,0), pred_color=(255,0,0)):
     """
     if I.shape[-1] == 1:
         I = cv2.cvtColor(I,cv2.COLOR_GRAY2RGB)
-        
+
     im_pred, contours_pred, _ = cv2.findContours(M_pred.copy(), 
                                                  cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     Z = np.zeros_like(I)
