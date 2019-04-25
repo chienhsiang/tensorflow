@@ -10,6 +10,8 @@ import re
 import functools
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+import cv2
+import numpy as np
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -132,6 +134,31 @@ def get_dataset(img_paths, mask_paths, read_img_fn=functools.partial(_get_image_
     dataset = dataset.repeat().batch(batch_size)
     
     return dataset
+
+
+"""
+For visual inspection
+"""
+def overlay_mask(I, M, M_pred, true_color=(0,255,0), pred_color=(255,0,0)):
+    """I, M, M_pred are uint8 numpy arrays
+    """
+    if I.shape[-1] == 1:
+        I = cv2.cvtColor(I,cv2.COLOR_GRAY2RGB)
+        
+    im_pred, contours_pred, _ = cv2.findContours(M_pred.copy(), 
+                                                 cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    Z = np.zeros_like(I)
+    if true_color is None:
+        I1 = np.zeros_like(I)
+    else:
+        im, contours, _ = cv2.findContours(M.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        I1 = cv2.drawContours(Z.copy(), contours, -1, true_color, 1)
+        
+    I2 = cv2.drawContours(Z.copy(), contours_pred, -1, pred_color, 1)
+    
+    I = np.uint8(np.clip(np.float32(I) + np.float32(I1) + np.float32(I2), 0, 255))
+    
+    return I
 
 
 # """
