@@ -222,7 +222,7 @@ def weighted_bce_loss(y_true, y_pred, **kwargs):
 
 
 def weighted_bce_dice_loss(y_true, y_pred, **kwargs):
-    loss = weighted_loss(y_true, y_pred, **kwargs) + dice_loss(y_true, y_pred)
+    loss = weighted_bce_loss(y_true, y_pred, **kwargs) + dice_loss(y_true, y_pred)
 
     return loss
 

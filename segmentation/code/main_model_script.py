@@ -31,7 +31,7 @@ Parameters
 """
 Common
 """
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 root_path = r'/awlab/users/chsu/WorkSpace/tensorflow/segmentation'
 
 MODE = 'TEST' # 'TRAIN', 'EVAL' or 'TEST'
@@ -41,7 +41,7 @@ MODE = 'TEST' # 'TRAIN', 'EVAL' or 'TEST'
 For EVAL and TEST
 """
 # For loading previously trained model using validation set
-model_name = 'incucyte_nuc_unweighted_bce_20190425_08-47-43'
+model_name = 'incucyte_nuc_weighted_bce_dice_20190424_16-09-32'
 model_dir = os.path.join(root_path, 'models', model_name)
 result_folder = os.path.join(root_path, 'results', model_name + '_test')
 
@@ -51,7 +51,7 @@ n_test = 5
 # for TEST
 file_dir = os.path.join(root_path,'data','2019028023_PC9_A549_with_nuclear_marker','images')
 file_type = '*.png'
-filter_patter = '_A2_'
+filter_patter = None
 test_read_cfg = {
     'channels': 1,
     'dtype': 'uint8', 
@@ -97,7 +97,7 @@ w_cfg = {
     'sigma': 5
 }
 
-loss_fn_type = 'weighted_bce'
+loss_fn_type = 'unweighted_bce_dice'
 metrics = [u_net.dice_loss]
 monitor = 'val_dice_loss'
 
