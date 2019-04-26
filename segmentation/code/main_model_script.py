@@ -50,6 +50,8 @@ n_test = 5
 
 # for TEST
 file_dir = os.path.join(root_path,'data','2019028023_PC9_A549_with_nuclear_marker','images')
+ans_dir = os.path.join(root_path,'data','2019028023_PC9_A549_with_nuclear_marker','masks') # or None
+# ans_dir = None
 file_type = '*.png'
 filter_patter = None
 test_read_cfg = {
@@ -59,6 +61,7 @@ test_read_cfg = {
     'resize': [1024, 1408],
     'scale': 1/255.
 }
+chunk_size = 50 # number of images to predict each time (memory issue)
 
 
 """-------------------------------------------------------------------------------------------------
@@ -256,26 +259,53 @@ if __name__ == '__main__':
                 break
 
     if MODE == 'TEST':
-        # Get test dataset
+        # Get test dataset and break into chunks (memory issue)
         img_files = data_io.get_filenames(file_dir, file_type, filter_patter)
+        img_files = [img_files[i:i+chunk_size] for i in range(0, len(img_files), chunk_size)]
+        if ans_dir is not None:
+            ans_files = data_io.get_filenames(ans_dir, file_type, filter_patter)
+            ans_files = [ans_files[i:i+chunk_size] for i in range(0, len(ans_files), chunk_size)]
+
         read_img_fn = functools.partial(data_io._get_image_from_path, **test_read_cfg)
-        test_ds = data_io.get_dataset(img_files, None, read_img_fn=read_img_fn,
-                                      shuffle=False, repeat=False, batch_size=1)
 
         # Get trained model
         model = get_trained_model()
-        y_pred = model.predict(test_ds, verbose=1)
 
         # Output the images
         if not os.path.isdir(result_folder):
             os.makedirs(result_folder)
 
-        for i, x in enumerate(test_ds):
-            print("{}/{}".format(i+1, len(img_files)), end='\r')
-            I = np.uint8(x[0]*255.)
-            M_pred = np.uint8((y_pred[i,...,0] > 0.5) * 255.)
-            I = data_io.overlay_mask(I, [], M_pred, true_color=None, pred_color=(255,0,0))
-            
-            fname = os.path.join(result_folder, os.path.basename(img_files[i]))
-            cv2.imwrite(fname, cv2.cvtColor(I, cv2.COLOR_RGB2BGR))
+        for i, g in enumerate(img_files):
+            print()
+            print("Predicting chunck {}/{}...".format(i+1, len(img_files)))
+            test_ds = data_io.get_dataset(g, None, read_img_fn=read_img_fn,
+                                          shuffle=False, repeat=False, batch_size=1)
+            y_pred = model.predict(test_ds, verbose=1)
+
+            if ans_dir is not None:
+                ans_ds = data_io.get_dataset(ans_files[i], None, read_img_fn=read_img_fn,
+                                             shuffle=False, repeat=False, batch_size=1)
+            else:
+                holder = [[] for i in range(len(g))]
+                ans_ds = tf.data.Dataset.from_tensor_slices(holder)
+
+            test_ds = tf.data.Dataset.zip((test_ds, ans_ds))
+
+            for j, (x, y) in enumerate(test_ds):
+                print("Saving results {}/{}...".format(j+1, len(g)), end='\r')
+                I = np.uint8(x[0]*255.)
+                M_pred = np.uint8((y_pred[j,...,0] > 0.5) * 255.)
+
+                if ans_dir is None:
+                    M = []
+                    true_color = None
+                else:
+                    M = np.uint8((y[0].numpy() > 0.5) * 255.)
+                    true_color = (0,255,0)
+
+                I = data_io.overlay_mask(I, M, M_pred, true_color=true_color, pred_color=(255,0,0))
+                
+                fname = os.path.join(result_folder, os.path.basename(g[j]))
+                cv2.imwrite(fname, cv2.cvtColor(I, cv2.COLOR_RGB2BGR))
+            print()
     
