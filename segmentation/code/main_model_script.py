@@ -31,27 +31,31 @@ Parameters
 """
 Common
 """
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 root_path = r'/awlab/users/chsu/WorkSpace/tensorflow/segmentation'
 
-MODE = 'TEST' # 'TRAIN', 'EVAL' or 'TEST'
+MODE = 'TRAIN' # 'TRAIN', 'EVAL' or 'TEST'
 
 
 """-------------------------------------------------------------------------------------------------
 For EVAL and TEST
 """
 # For loading previously trained model using validation set
-model_name = 'incucyte_nuc_weighted_bce_dice_20190424_16-09-32'
+# model_name = 'incucyte_nuc_weighted_bce_dice_20190424_16-09-32'
+model_name = 'incucyte_nuc_weighted_bce_dice_20190425_20-22-26'
 model_dir = os.path.join(root_path, 'models', model_name)
-result_folder = os.path.join(root_path, 'results', model_name + '_test')
+
+test_data_name = '2019028023_PC9_A549_with_nuclear_marker'
+result_folder = os.path.join(root_path, 'results', model_name + '_' + test_data_name)
 
 # for EVAL
 n_test = 5
 
 # for TEST
-file_dir = os.path.join(root_path,'data','2019028023_PC9_A549_with_nuclear_marker','images')
-ans_dir = os.path.join(root_path,'data','2019028023_PC9_A549_with_nuclear_marker','masks') # or None
+file_dir = os.path.join(root_path,'data',test_data_name,'images')
+ans_dir = os.path.join(root_path,'data',test_data_name,'masks') # or None
 # ans_dir = None
+
 file_type = '*.png'
 filter_patter = None
 test_read_cfg = {
@@ -61,7 +65,7 @@ test_read_cfg = {
     'resize': [1024, 1408],
     'scale': 1/255.
 }
-chunk_size = 50 # number of images to predict each time (memory issue)
+chunk_size = 100 # number of images to predict each time (memory issue)
 
 
 """-------------------------------------------------------------------------------------------------
@@ -78,7 +82,7 @@ nuc_idx = 1
 cell_idx = 0
 
 # dataset config
-resize = None
+resize = [1024, 1408]
 scale = 1/255.
 
 train_cfg = {
@@ -91,21 +95,21 @@ val_cfg = {
 }
 
 # building model
-num_filters_list = [32, 64, 128, 256, 512]
+num_filters_list = [32, 64, 128, 256, 512, 1024]
 n_classes = 2
 w_cfg = {
     'nuc_ch': 1,
     'cell_ch': 0,
-    'w0': 10,
+    'w0': 20,
     'sigma': 5
 }
 
-loss_fn_type = 'unweighted_bce_dice'
+loss_fn_type = 'weighted_bce'
 metrics = [u_net.dice_loss]
 monitor = 'val_dice_loss'
 
 # training model
-model_tag = 'incucyte_nuc_' + loss_fn_type + '_'
+model_tag = 'incucyte_nuc_1024_' + loss_fn_type + '_'
 epochs = 50
 
 
