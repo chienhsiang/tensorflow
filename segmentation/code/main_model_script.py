@@ -29,12 +29,12 @@ Parameters
 ###############################################################################################
 
 """
-Common
+Commond
 """
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 root_path = r'/awlab/users/chsu/WorkSpace/tensorflow/segmentation'
 
-MODE = 'TRAIN' # 'TRAIN', 'EVAL' or 'TEST'
+MODE = 'EVAL' # 'TRAIN', 'EVAL' or 'TEST'
 
 
 """-------------------------------------------------------------------------------------------------
@@ -42,11 +42,15 @@ For EVAL and TEST
 """
 # For loading previously trained model using validation set
 # model_name = 'incucyte_nuc_weighted_bce_dice_20190424_16-09-32'
-model_name = 'incucyte_nuc_weighted_bce_dice_20190425_20-22-26'
+model_name = 'incucyte_nuc_1024_weighted_bce_20190428_08-56-08'
 model_dir = os.path.join(root_path, 'models', model_name)
 
 test_data_name = '2019028023_PC9_A549_with_nuclear_marker'
-result_folder = os.path.join(root_path, 'results', model_name + '_' + test_data_name)
+
+if MODE == 'EVAL':
+    test_data_name = ''
+
+result_folder = os.path.join(root_path, 'results', model_name + '_' + MODE + '_' + test_data_name)
 
 # for EVAL
 n_test = 5
