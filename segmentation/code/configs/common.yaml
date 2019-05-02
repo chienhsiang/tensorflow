@@ -12,4 +12,5 @@ img_subfolder: images
 mask_subfolder: masks
 
 model_subfolder: models
+log_subfolder: logs
 result_subfolder: results
