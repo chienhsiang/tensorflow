@@ -3,4 +3,13 @@
 # Chien-Hsiang Hsu, 2019.04.29
 
 
+####################################################################################################
+# Path and folder
+####################################################################################################
+root_folder: '/awlab/users/chsu/WorkSpace/tensorflow/segmentation/'
+data_subfoler: data
+img_subfolder: images
+mask_subfolder: masks
 
+model_subfolder: models
+result_subfolder: results
