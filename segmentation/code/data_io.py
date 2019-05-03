@@ -20,6 +20,9 @@ def get_filenames(file_dir, file_type, filter_pattern):
     """ Get file names 
         file_type: e.g. '*.png'
         filter_pattern: regular expression of file name to keep
+
+    Return:
+        list of file full paths.
     """
     
     fnames = sorted(glob.glob(os.path.join(file_dir, file_type))) 
@@ -33,6 +36,13 @@ def get_filenames(file_dir, file_type, filter_pattern):
 
 def get_data_filenames(img_dir, mask_dir, img_file_pattern, mask_file_pattern, match_pattern,
                        test_size=0.2, random_state=None, **kwargs):
+    """ Get file names of images and mask. Split into training and validation sets.
+        img_file_pattern, mask_file_pattern: e.g. '*.png'
+        match_pattern: regular expression of file name to keep
+
+    Return:
+        tuple of lists file full paths (x_train, x_val, y_train, y_val)
+    """
     # Get image mask file names
     x_train_fnames = get_filenames(img_dir, img_file_pattern, match_pattern)
     y_train_fnames = get_filenames(mask_dir, mask_file_pattern, match_pattern)

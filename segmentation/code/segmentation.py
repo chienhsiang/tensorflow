@@ -195,7 +195,7 @@ class Task:
         if not os.path.isdir(result_folder):
             os.makedirs(result_folder)
 
-        idx_to_plot = np.random.choice(num_val_data, n_test)
+        idx_to_plot = np.random.choice(num_val_data, self.cfg['n_eval'])
         for i, (img, mask) in enumerate(val_ds):
             if i in idx_to_plot:
                 y_pred = model(img)        
@@ -236,10 +236,12 @@ class Task:
         chunk_size = test_cfg['chunk_size']
         test_read_cfg = test_cfg['test_read_cfg']
 
+        overlay_ans = test_cfg['output_type'] == 'overlay_ans'
+
         # Get test dataset and break into chunks (memory issue)
         img_files = data_io.get_filenames(file_dir, file_type, filter_patter)
         img_files = [img_files[i:i+chunk_size] for i in range(0, len(img_files), chunk_size)]
-        if test_cfg['show_ans']:
+        if overlay_ans:
             ans_dir = test_cfg['test_mask_dir']
             ans_files = data_io.get_filenames(ans_dir, file_type, filter_patter)
             ans_files = [ans_files[i:i+chunk_size] for i in range(0, len(ans_files), chunk_size)]
@@ -249,19 +251,27 @@ class Task:
         # Get trained model
         model = self.get_trained_model()
 
-        # Output the images
-        result_folder = os.path.join(self.get_result_dir(), test_cfg['test_data']['name'])
-        if not os.path.isdir(result_folder):
-            os.makedirs(result_folder)
+        # Output folers
+        result_folder_overlay = os.path.join(self.get_result_dir(), 
+                                             test_cfg['test_data']['name'], 
+                                             test_cfg['output_type'])
+        result_folder_pred = os.path.join(self.get_result_dir(), 
+                                          test_cfg['test_data']['name'], 'predictions')
+        if not os.path.isdir(result_folder_overlay):
+            os.makedirs(result_folder_overlay)
+        if not os.path.isdir(result_folder_pred):
+            os.makedirs(result_folder_pred)
 
-        for i, g in enumerate(img_files):
+
+        # Loop thourgh images and ouput overlay 
+        for i, g in enumerate(img_files): # loop through chunks
             print()
             print("Predicting chunck {}/{}...".format(i+1, len(img_files)))
             test_ds = data_io.get_dataset(g, None, read_img_fn=read_img_fn,
                                           shuffle=False, repeat=False, batch_size=1)
             y_pred = model.predict(test_ds, verbose=1)
 
-            if test_cfg['show_ans']:
+            if overlay_ans:
                 ans_ds = data_io.get_dataset(ans_files[i], None, read_img_fn=read_img_fn,
                                              shuffle=False, repeat=False, batch_size=1)
             else:
@@ -275,17 +285,23 @@ class Task:
                 I = np.uint8(x[0]*255.)
                 M_pred = np.uint8((y_pred[j,...,0] > 0.5) * 255.)
 
-                if test_cfg['show_ans']:
-                    M = []
-                    true_color = None
-                else:
+                if overlay_ans:
                     M = np.uint8((y[0].numpy() > 0.5) * 255.)
                     true_color = (0,255,0)
+                else:
+                    M = []
+                    true_color = None
 
+                # Overlayed image
                 I = data_io.overlay_mask(I, M, M_pred, true_color=true_color, pred_color=(255,0,0))
-                
-                fname = os.path.join(result_folder, os.path.basename(g[j]))
+                fname = os.path.join(result_folder_overlay, os.path.basename(g[j]))
                 cv2.imwrite(fname, cv2.cvtColor(I, cv2.COLOR_RGB2BGR))
+
+                # Prediction (probability)
+                pred_img = np.uint8(y_pred[j,...,0] * 255.)
+                fname = os.path.join(result_folder_pred, os.path.basename(g[j]))
+                cv2.imwrite(fname, pred_img)
+
             print()
 
 

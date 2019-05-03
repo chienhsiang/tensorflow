@@ -8,7 +8,7 @@
 # TEST config
 ####################################################################################################
 test_data: 
-  name: 2019028023_PC9_A549_with_nuclear_marker
+  name: 2018028010_PC9_nuclear_dye_test
   file_type: '*.png'
   filter_patter: null
 
