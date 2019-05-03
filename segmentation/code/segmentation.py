@@ -312,9 +312,9 @@ if __name__ == '__main__':
     parser = ArgumentParser()
 
     parser.add_argument("task_yaml", help="yaml file of the task")
-    parser.add_argument("-mode", dest="mode", help="TRAIN, EVAL or TEST", default="TRAIN")
-    parser.add_argument("-gpu_id", dest="gpu", help="ID of GPU to use", default='0')
-    parser.add_argument("-test_yaml", dest="test_yaml", help="Yaml of test data", default='')
+    parser.add_argument("--mode", dest="mode", help="TRAIN, EVAL or TEST", default="TRAIN")
+    parser.add_argument("--gpu_id", dest="gpu", help="ID of GPU to use", default='0')
+    parser.add_argument("--test_yaml", dest="test_yaml", help="Yaml of test data", default='')
 
     args = parser.parse_args()
 
