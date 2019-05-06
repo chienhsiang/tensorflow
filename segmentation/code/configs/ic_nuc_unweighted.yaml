@@ -1,10 +1,9 @@
 # Config for segmenting nucleus using IncuCyte phase images
-# 6-layer model with w0 = 10.
 #
-# Chien-Hsiang Hsu, 2019.05.03
+# Chien-Hsiang Hsu, 2019.05.01
 
 
-model_name: ic_nuc_L6_w10
+model_name: ic_nuc_unweighted
 
 
 ####################################################################################################
@@ -45,7 +44,7 @@ batch_size: 5
 ####################################################################################################
 # Model config
 ####################################################################################################
-num_filters_list: [16, 32, 64, 128, 256, 512]
+num_filters_list: [32, 64, 128, 256, 512]
 n_classes: 2
 
 
@@ -54,10 +53,10 @@ n_classes: 2
 ####################################################################################################
 # weight config
 w_cfg:
-  w0: 10
+  w0: 20
   sigma: 5
 
-loss_fn_name: weighted_bce
+loss_fn_name: unweighted_bce
 metrics: [u_net.dice_loss]
 monitor: val_dice_loss
 epochs: 50

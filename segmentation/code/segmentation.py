@@ -69,6 +69,11 @@ class Task:
 
         if 'test_read_cfg' in cfg:
             cfg['test_read_cfg']['scale'] = eval(cfg['test_read_cfg']['scale'])
+
+        if 'optimizer' in cfg:
+            cfg['optimizer'] = eval(cfg['optimizer'])
+        else:
+            cfg['optimizer'] = 'adam'
             
         return cfg  
 
@@ -105,13 +110,14 @@ class Task:
         num_filters_list = self.cfg['num_filters_list']
         n_classes = self.cfg['n_classes']
         metrics = self.cfg['metrics']
+        optimizer = self.cfg['optimizer']
 
         model = u_net.Unet(num_filters_list, n_classes=n_classes, dynamic=True)
 
         # loss functions
         loss_fn = self.get_loss_fn_from_name(self.cfg['loss_fn_name'])
 
-        model.compile(optimizer='adam', loss=loss_fn, metrics=metrics)
+        model.compile(optimizer=optimizer, loss=loss_fn, metrics=metrics)
 
         return model
 

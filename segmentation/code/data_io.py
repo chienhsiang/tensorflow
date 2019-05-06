@@ -60,15 +60,15 @@ def _get_image_from_path(img_path, channels=1, dtype='uint8', crop_bd_width=0,
     # Read image
     img = tf.image.decode_png(tf.io.read_file(img_path), channels=channels, dtype=dtype)
     
+    # Resize 
+    if resize is not None:
+        img = tf.image.resize(img, size=resize)
+
     # Remove bounday 100 pixels since masks touching boundaries were removed
     if crop_bd_width > 0:
         w = crop_bd_width
         img = img[w:-w,w:-w,:]
         mask = mask[w:-w,w:-w,:]
-
-    # Resize 
-    if resize is not None:
-        img = tf.image.resize(img, size=resize)
 
     # Scale the intensity
     img = tf.cast(img, tf.float32) * scale
