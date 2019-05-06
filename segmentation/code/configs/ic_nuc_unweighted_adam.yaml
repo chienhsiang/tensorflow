@@ -1,11 +1,9 @@
 # Config for segmenting nucleus using IncuCyte phase images
-# 4-layered, W0 = 10, SGD
-# No cropping in validation.
 #
-# Chien-Hsiang Hsu, 2019.05.06
+# Chien-Hsiang Hsu, 2019.05.01
 
 
-model_name: ic_nuc_paper
+model_name: ic_nuc_unweighted_adam
 
 
 ####################################################################################################
@@ -19,7 +17,7 @@ match_pattern: '_[A-Z]([4]|10)_'
 # Used in tensorflow to load data
 read_cfg :
   channels: 1
-  dtype: uint8   
+  dtype: uint8
   resize: [1024, 1408]
   crop_bd_width: 0
   scale: 1/255.
@@ -46,7 +44,7 @@ batch_size: 5
 ####################################################################################################
 # Model config
 ####################################################################################################
-num_filters_list: [64, 128, 256, 512]
+num_filters_list: [32, 64, 128, 256, 512]
 n_classes: 2
 
 
@@ -55,11 +53,11 @@ n_classes: 2
 ####################################################################################################
 # weight config
 w_cfg:
-  w0: 15
+  w0: 20
   sigma: 5
 
-loss_fn_name: weighted_bce
-optimizer: tf.keras.optimizers.Adam(learning_rate=2e-4)
+loss_fn_name: unweighted_bce
+optimizer: tf.keras.optimizers.Adam(learning_rate=1e-4)
 metrics: [u_net.dice_loss]
 monitor: val_dice_loss
 epochs: 50
