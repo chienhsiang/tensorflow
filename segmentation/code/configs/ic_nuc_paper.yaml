@@ -59,7 +59,7 @@ w_cfg:
   sigma: 5
 
 loss_fn_name: weighted_bce
-optimizer: tf.keras.optimizers.Adam(learning_rate=2e-4)
+optimizer: tf.keras.optimizers.Adam(learning_rate=1e-4)
 metrics: [u_net.dice_loss]
 monitor: val_dice_loss
 epochs: 50
