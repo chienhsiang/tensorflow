@@ -55,14 +55,14 @@ n_classes: 2
 ####################################################################################################
 # weight config
 w_cfg:
-  w0: 15
+  w0: 10
   sigma: 5
 
 loss_fn_name: weighted_bce
 optimizer: tf.keras.optimizers.Adam(learning_rate=1e-4)
 metrics: [u_net.dice_loss]
 monitor: val_dice_loss
-epochs: 50
+epochs: 100
 
 
 ####################################################################################################
