@@ -1,0 +1,16 @@
+# Contain common paths/parameters for other config files.
+#
+# Chien-Hsiang Hsu, 2019.04.29
+
+
+####################################################################################################
+# Path and folder
+####################################################################################################
+root_folder: '/awlab/users/chsu/WorkSpace/tensorflow/neuron/'
+data_subfoler: data
+img_subfolder: images
+mask_subfolder: masks
+
+model_subfolder: models
+log_subfolder: logs
+result_subfolder: results
