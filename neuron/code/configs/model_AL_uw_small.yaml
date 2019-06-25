@@ -5,7 +5,7 @@
 # Chien-Hsiang Hsu, 2019.06.18
 
 
-model_name: test
+model_name: AL_uw_small
 
 
 ####################################################################################################
@@ -14,7 +14,7 @@ model_name: test
 train_data: 'adults_larvae'
 img_file_pattern: '*.png'
 mask_file_pattern: '*.png' 
-match_pattern: 'Adults'
+match_pattern: '(Adults_|_CEO)'
 
 # Used in tensorflow to load data
 read_cfg :
@@ -46,7 +46,7 @@ batch_size: 5
 ####################################################################################################
 # Model config
 ####################################################################################################
-num_filters_list: [64, 128, 256, 512]
+num_filters_list: [16, 32, 64, 128, 256]
 n_classes: 2
 
 
@@ -58,11 +58,11 @@ w_cfg:
   w0: 10
   sigma: 5
 
-loss_fn_name: unweighted_bce_dice
+loss_fn_name: unweighted_dice
 optimizer: tf.keras.optimizers.Adam(learning_rate=1e-4)
 metrics: [u_net.dice_loss]
 monitor: val_dice_loss
-epochs: 15
+epochs: 1000
 
 
 ####################################################################################################

@@ -17,8 +17,8 @@ import cv2
 Define Layers
 """
 class Conv_block(layers.Layer):
-    def __init__(self, num_filters, name='conv_block'):
-        super().__init__(name=name)
+    def __init__(self, num_filters): # , name='conv_block'
+        super().__init__() #name=name
         self.num_filters = num_filters
         self.conv2d_1 = layers.Conv2D(num_filters, (3, 3), padding='same')
         self.bn_1 = layers.BatchNormalization()
@@ -38,8 +38,8 @@ class Conv_block(layers.Layer):
 
 
 class Encoder(layers.Layer):
-    def __init__(self, num_filters, name='encoder'):
-        super().__init__(name=name)
+    def __init__(self, num_filters): # , name='encoder'
+        super().__init__()
         self.num_filters = num_filters
         self.conv_block = Conv_block(num_filters)
         self.mp2d = layers.MaxPool2D((2, 2), strides=(2, 2))
@@ -51,8 +51,8 @@ class Encoder(layers.Layer):
 
 
 class Decoder(layers.Layer):
-    def __init__(self, num_filters, name='decoder'):
-        super().__init__(name=name)
+    def __init__(self, num_filters): # , name='decoder'
+        super().__init__()
         self.num_filters = num_filters
         self.conv2d_tr = layers.Conv2DTranspose(num_filters, (2, 2), 
                                                 strides=(2, 2), padding='same')
@@ -72,10 +72,10 @@ class Decoder(layers.Layer):
 """
 Define model
 """
-class Unet(models.Model):
-    def __init__(self, n_filters_list, n_classes=2, name='u_net', dynamic=True, **kwargs):
+class Unet(tf.keras.Model):
+    def __init__(self, n_filters_list, n_classes=2, dynamic=True, **kwargs): # , name='u_net'
         assert type(n_filters_list) is list, "n_filters_list must be a list"
-        super().__init__(name=name, dynamic=dynamic, **kwargs)
+        super().__init__(dynamic=dynamic, **kwargs)
         self.conv_block_center = Conv_block(n_filters_list[-1] * 2)
         self.conv_block_final = Conv_block(n_filters_list[0])
 
@@ -88,7 +88,7 @@ class Unet(models.Model):
         
         self.encoders = [Encoder(n_filters) for n_filters in n_filters_list]
         self.decoders = [Decoder(n_filters) for n_filters in reversed(n_filters_list)]
-        
+    
     def call(self, inputs):
         # Encoding cascade
         x_pools = []

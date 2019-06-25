@@ -4,7 +4,7 @@ __author__ = 'Chien-Hsiang Hsu'
 __create_date__ = '2019.04.24'
 
 
-import os
+import os, re
 import functools
 import yaml
 from argparse import ArgumentParser
@@ -25,6 +25,16 @@ from tensorflow.keras import models, layers, losses
 
 CONFIGS_FOLDER = 'configs'
 COMMON_YAML = 'common.yaml'
+
+# Limit GPU memory usage
+# physical_devices = tf.config.experimental.list_physical_devices('GPU')
+# print(physical_devices)
+# assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+# for g in physical_devices:
+#     tf.config.experimental.set_memory_growth(g, True)
+
+# for g in physical_devices:
+#     print(tf.config.experimental.get_memory_growth(g))
 
 
 class Task:
@@ -116,7 +126,7 @@ class Task:
         # loss functions
         loss_fn = self.get_loss_fn_from_name(self.cfg['loss_fn_name'])
 
-        model.compile(optimizer=optimizer, loss=loss_fn, metrics=metrics)
+        model.compile(optimizer=optimizer, loss=loss_fn, metrics=metrics, run_eagerly=True)
 
         return model
 
@@ -137,7 +147,7 @@ class Task:
 
 
     def get_trained_model(self):
-        cfg = self.cfg
+        # cfg = self.cfg
 
         # Load the trained model
         model_dir = self.get_model_dir()
@@ -149,35 +159,62 @@ class Task:
         model = self.get_model()
         model.load_weights(latest)
 
-        # performance = model.evaluate(val_ds, steps=int(np.ceil(num_val_data / batch_size)))
-        # print()
-        # print("Performance: {}".format(performance))
-
         return model
+
+
+    def get_init_epoch(self, latest):
+
+        if latest is None:
+            init_epoch = 0
+
+        else:
+            pattern = re.compile('-(?P<epoch>\d+)\.')
+            m = pattern.search(os.path.basename(latest))
+            init_epoch = int(m.group('epoch'))
+            
+        return init_epoch
 
 
     def train_model(self):
         cfg = self.cfg
         monitor = cfg['monitor']
         epochs = cfg['epochs']
-
-        train_ds, val_ds, num_train_data, num_val_data, batch_size = self.get_train_val_dataset()
-        model = self.get_model()
-
-        # callbacks
-        # timestamp = '{}'.format(datetime.datetime.now()).split('.')[0]
-        # timestamp = timestamp.replace('-','').replace(':','-').replace(' ','_')
         model_dir = self.get_model_dir()
 
-        # model weights
+        if not os.path.isdir(model_dir):
+            os.makedirs(model_dir, exist_ok=True)
+
+        # get training data
+        train_ds, val_ds, num_train_data, num_val_data, batch_size = self.get_train_val_dataset()
+
+        # build the model
+        model = self.get_model()
+
+        # check whether to resume previous training
+        latest = tf.train.latest_checkpoint(model_dir)
+        if latest is not None: # previous training exists
+            act = input("This model has been trained. Resume training? (R)esume | (N)ew | (A)bort: ")
+
+            if act in ['R', 'r']:
+                model = self.get_trained_model()
+
+            elif act in ['N', 'n']:
+                latest = None
+                
+            else:
+                print("Abort")
+                exit(0)
+        
+
+        initial_epoch = self.get_init_epoch(latest)
+
+
+        # checkpoint callback (saving model weights)
         weights_path = os.path.join(model_dir, 'weights-{epoch:04d}.ckpt')
-        weights_dir = os.path.dirname(weights_path)
-        if not os.path.isdir(weights_dir):
-            os.makedirs(weights_dir, exist_ok=True)
         cp = tf.keras.callbacks.ModelCheckpoint(filepath=weights_path, monitor=monitor, 
                                                 save_best_only=True, save_weights_only=True, 
                                                 verbose=1)
-        # tensorboard
+        # tensorboard callback
         log_dir = self.get_log_dir()
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir, exist_ok=True)
@@ -188,7 +225,8 @@ class Task:
                             steps_per_epoch=int(np.ceil(num_train_data / batch_size)),
                             validation_data=val_ds,
                             validation_steps=int(np.ceil(num_val_data / batch_size)),
-                            callbacks=[cp, tb])
+                            callbacks=[cp, tb],
+                            initial_epoch=initial_epoch)
 
 
     def eval_model(self):
@@ -341,6 +379,12 @@ if __name__ == '__main__':
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     MODE = args.mode
+
+    # Limit GPU memory usage
+    # physical_devices = tf.config.experimental.list_physical_devices('GPU')
+    # print(physical_devices)
+    # assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+    # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     # Get task
     task = Task(args.task_yaml)
