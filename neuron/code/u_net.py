@@ -88,7 +88,8 @@ class Unet(tf.keras.Model):
         
         self.encoders = [Encoder(n_filters) for n_filters in n_filters_list]
         self.decoders = [Decoder(n_filters) for n_filters in reversed(n_filters_list)]
-    
+
+
     def call(self, inputs):
         # Encoding cascade
         x_pools = []

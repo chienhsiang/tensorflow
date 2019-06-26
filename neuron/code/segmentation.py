@@ -126,7 +126,7 @@ class Task:
         # loss functions
         loss_fn = self.get_loss_fn_from_name(self.cfg['loss_fn_name'])
 
-        model.compile(optimizer=optimizer, loss=loss_fn, metrics=metrics, run_eagerly=True)
+        model.compile(optimizer=optimizer, loss=loss_fn, metrics=metrics, run_eagerly=True) 
 
         return model
 
@@ -381,6 +381,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    
     MODE = args.mode
 
     # Limit GPU memory usage
