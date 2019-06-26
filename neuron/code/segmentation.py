@@ -147,8 +147,6 @@ class Task:
 
 
     def get_trained_model(self):
-        # cfg = self.cfg
-
         # Load the trained model
         model_dir = self.get_model_dir()
         latest = tf.train.latest_checkpoint(model_dir)
@@ -175,7 +173,7 @@ class Task:
         return init_epoch
 
 
-    def train_model(self):
+    def train_model(self, transfer=False, src_model_yaml=''):
         cfg = self.cfg
         monitor = cfg['monitor']
         epochs = cfg['epochs']
@@ -188,26 +186,30 @@ class Task:
         train_ds, val_ds, num_train_data, num_val_data, batch_size = self.get_train_val_dataset()
 
         # build the model
-        model = self.get_model()
+        if transfer:
+            assert src_model_yaml is not '', "Require source model yaml to transfer."
+            src_model = Task(src_model_yaml)
+            model = src_model.get_trained_model()
+            latest = None
 
-        # check whether to resume previous training
-        latest = tf.train.latest_checkpoint(model_dir)
-        if latest is not None: # previous training exists
-            act = input("This model has been trained. Resume training? (R)esume | (N)ew | (A)bort: ")
+        else:
+            # check whether to resume previous training
+            latest = tf.train.latest_checkpoint(model_dir)
+            if latest is not None: # previous training exists
+                act = input("This model has been trained. Resume training? (R)esume | (N)ew | (A)bort: ")
 
-            if act in ['R', 'r']:
-                model = self.get_trained_model()
+                if act in ['R', 'r']:
+                    model = self.get_trained_model()
 
-            elif act in ['N', 'n']:
-                latest = None
-                
-            else:
-                print("Abort")
-                exit(0)
-        
+                elif act in ['N', 'n']:
+                    model = self.get_model()
+                    latest = None
+                    
+                else:
+                    print("Abort")
+                    exit(0)        
 
         initial_epoch = self.get_init_epoch(latest)
-
 
         # checkpoint callback (saving model weights)
         weights_path = os.path.join(model_dir, 'weights-{epoch:04d}.ckpt')
@@ -371,8 +373,9 @@ if __name__ == '__main__':
     parser = ArgumentParser()
 
     parser.add_argument("task_yaml", help="yaml file of the task")
-    parser.add_argument("--mode", dest="mode", help="TRAIN, EVAL or TEST", default="TRAIN")
+    parser.add_argument("--mode", dest="mode", help="TRAIN, TRANSFER, EVAL or TEST", default="TRAIN")
     parser.add_argument("--gpu_id", dest="gpu", help="ID of GPU to use", default='0')
+    parser.add_argument("--src_model_yaml", dest="src_model_yaml", help="Yaml of source model", default='')
     parser.add_argument("--test_yaml", dest="test_yaml", help="Yaml of test data", default='')
 
     args = parser.parse_args()
@@ -389,8 +392,8 @@ if __name__ == '__main__':
     # Get task
     task = Task(args.task_yaml)
 
-    if MODE == 'TRAIN':
-        task.train_model()
+    if MODE in ['TRAIN', 'TRANSFER']:
+        task.train_model(transfer=MODE=='TRANSFER', src_model_yaml=args.src_model_yaml)
 
     if MODE == 'EVAL':
         task.eval_model()
