@@ -5,7 +5,7 @@
 # Chien-Hsiang Hsu, 2019.06.18
 
 
-model_name: AL_uw_deeped
+model_name: AL_uw_deep
 
 
 ####################################################################################################
@@ -14,7 +14,7 @@ model_name: AL_uw_deeped
 train_data: 'adults_larvae'
 img_file_pattern: '*.png'
 mask_file_pattern: '*.png' 
-match_pattern: '(Adults_|_CEO)'
+match_pattern: '(Adults|CEO)'
 
 # Used in tensorflow to load data
 read_cfg :
@@ -46,7 +46,7 @@ batch_size: 5
 ####################################################################################################
 # Model config
 ####################################################################################################
-num_filters_list: [64, 64, 64, 64, 128, 256]
+num_filters_list: [64, 64, 64, 64, 64, 128, 256]
 n_classes: 2
 
 
@@ -62,7 +62,7 @@ loss_fn_name: unweighted_bce_dice
 optimizer: tf.keras.optimizers.Adam(learning_rate=1e-4)
 metrics: [u_net.dice_loss]
 monitor: val_dice_loss
-epochs: 1000
+epochs: 500
 
 
 ####################################################################################################

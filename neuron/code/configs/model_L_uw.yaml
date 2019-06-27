@@ -5,7 +5,7 @@
 # Chien-Hsiang Hsu, 2019.06.18
 
 
-model_name: AL_uw
+model_name: L_uw
 
 
 ####################################################################################################
@@ -14,7 +14,7 @@ model_name: AL_uw
 train_data: 'adults_larvae'
 img_file_pattern: '*.png'
 mask_file_pattern: '*.png' 
-match_pattern: '(Adults|CEO)'
+match_pattern: 'CEO'
 
 # Used in tensorflow to load data
 read_cfg :

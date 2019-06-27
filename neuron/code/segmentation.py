@@ -212,7 +212,9 @@ class Task:
                     
                 else:
                     print("Abort")
-                    exit(0)        
+                    exit(0)
+            else:
+                model = self.get_model()
 
         initial_epoch = self.get_init_epoch(latest)
 
