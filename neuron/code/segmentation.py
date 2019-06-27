@@ -88,7 +88,7 @@ class Task:
 
 
     # For getting tf datasets
-    def get_train_val_dataset(self):
+    def get_train_val_dataset(self, return_file_names=False):
         cfg = self.cfg
 
         x_train_fnames, x_val_fnames, y_train_fnames, y_val_fnames = \
@@ -111,7 +111,12 @@ class Task:
         val_ds = data_io.get_dataset(x_val_fnames, y_val_fnames, read_img_fn=read_img_fn, 
                                      preproc_fn=val_preproc_fn, shuffle=False, batch_size=batch_size)
 
-        return train_ds, val_ds, num_train_data, num_val_data, batch_size
+        if return_file_names:
+            return train_ds, val_ds, num_train_data, num_val_data, batch_size, \
+                   x_train_fnames, x_val_fnames, y_train_fnames, y_val_fnames
+
+        else:
+            return train_ds, val_ds, num_train_data, num_val_data, batch_size
 
 
     # Build the model
@@ -232,47 +237,36 @@ class Task:
 
 
     def eval_model(self):
-        train_ds, val_ds, num_train_data, num_val_data, batch_size = self.get_train_val_dataset()
-        model = self.get_trained_model()
+        x_train_fnames, x_val_fnames, y_train_fnames, y_val_fnames = \
+            data_io.get_data_filenames(**self.cfg)
 
-        # Export predicted images
-        result_folder = os.path.join(self.get_result_dir(), "EVAL")
-        if not os.path.isdir(result_folder):
-            os.makedirs(result_folder)
+        # Prepare inputs
+        chunk_size = self.cfg['batch_size']
+        read_img_fn = functools.partial(data_io._get_image_from_path, **self.cfg['read_cfg'])
+        overlay_ans = True
 
-        idx_to_plot = np.random.choice(num_val_data, self.cfg['n_eval'])
-        for i, (img, mask) in enumerate(val_ds):
-            if i in idx_to_plot:
-                y_pred = model(img)        
-                for j in range(batch_size-1):
-                    I = np.uint8(img[j].numpy()*255.)
-                    M = np.uint8(mask[j].numpy()*255.) 
-                    M_pred = np.uint8((y_pred[j].numpy() > 0.5) *255.)
-                    
-                    if task == 'both_seg':
-                        I = np.uint8(img[j].numpy()*255.)
-                        M = np.uint8(mask[j].numpy()*255.) 
-                        M_pred = np.uint8((y_pred[j].numpy() > 0.5) *255.)
-                        
-                        # overlay nucleus segmentation
-                        I = data_io.overlay_mask(I, M[:,:,nuc_idx], M_pred[:,:,nuc_idx], 
-                                         true_color=None, pred_color=(0,255,255))
-                        # overlay cell segmentation
-                        I = data_io.overlay_mask(I, M[:,:,cell_idx], M_pred[:,:,cell_idx], 
-                                         true_color=None, pred_color=(255,0,255))
-                    else:
-                        I = data_io.overlay_mask(I, M[:,:,0], M_pred[:,:,0])
-                    
-                    fname = os.path.join(result_folder, '{}_{}.png'.format(i,j))
-                    cv2.imwrite(fname, cv2.cvtColor(I, cv2.COLOR_RGB2BGR))
-                    
-            if i > max(idx_to_plot):
-                print("Save results at:")
-                print('  ', result_folder)
-                break
+        # Output folders
+        train_overlay = os.path.join(self.get_result_dir(), 'train_data', 'overlay_ans')
+        train_pred = os.path.join(self.get_result_dir(), 'train_data', 'predictions')
+
+        val_overlay = os.path.join(self.get_result_dir(), 'validation_data', 'overlay_ans')
+        val_pred = os.path.join(self.get_result_dir(), 'validation_data', 'predictions')
+
+        # Output prediction
+        print("Outputing training data prediction...")
+        self.output_predictions(x_train_fnames, read_img_fn, chunk_size=chunk_size, overlay_ans=overlay_ans, 
+                                ans_files=y_train_fnames, result_folder_pred=train_pred,
+                                result_folder_overlay=train_overlay)
+
+        print("Outputing validation data prediction...")
+        self.output_predictions(x_val_fnames, read_img_fn, chunk_size=chunk_size, overlay_ans=overlay_ans, 
+                                ans_files=y_val_fnames, result_folder_pred=val_pred,
+                                result_folder_overlay=val_overlay)
 
 
     def test_model(self, test_yaml):
+
+        # Prepare inputs
         test_cfg = self.get_cfg_from_yaml(test_yaml)
 
         file_dir = test_cfg['test_img_dir']
@@ -283,32 +277,62 @@ class Task:
 
         overlay_ans = test_cfg['output_type'] == 'overlay_ans'
 
-        # Get test dataset and break into chunks (memory issue)
+        # Get img_files and ans_files
         img_files = data_io.get_filenames(file_dir, file_type, filter_patter)
-        img_files = [img_files[i:i+chunk_size] for i in range(0, len(img_files), chunk_size)]
         if overlay_ans:
             ans_dir = test_cfg['test_mask_dir']
             ans_files = data_io.get_filenames(ans_dir, file_type, filter_patter)
-            ans_files = [ans_files[i:i+chunk_size] for i in range(0, len(ans_files), chunk_size)]
+        else:
+            ans_files = None
 
         read_img_fn = functools.partial(data_io._get_image_from_path, **test_read_cfg)
 
-        # Get trained model
-        model = self.get_trained_model()
-
-        # Output folers
+        # Output folders
         result_folder_overlay = os.path.join(self.get_result_dir(), 
                                              test_cfg['test_data']['name'], 
                                              test_cfg['output_type'])
         result_folder_pred = os.path.join(self.get_result_dir(), 
                                           test_cfg['test_data']['name'], 'predictions')
+
+        # Output prediction
+        self.output_predictions(img_files, read_img_fn, chunk_size=chunk_size, overlay_ans=overlay_ans, 
+                                ans_files=ans_files, result_folder_pred=result_folder_pred,
+                                result_folder_overlay=result_folder_overlay)
+
+
+    #-----------------------------------------------------------------------------------------------
+    # Helper functions
+    #-----------------------------------------------------------------------------------------------
+    def get_model_dir(self):
+        cfg = self.cfg
+        return os.path.join(cfg['root_folder'], cfg['model_subfolder'], cfg['model_name'])
+
+    def get_log_dir(self):
+        cfg = self.cfg
+        return os.path.join(cfg['root_folder'], cfg['log_subfolder'], cfg['model_name'])
+
+    def get_result_dir(self):
+        cfg = self.cfg
+        return os.path.join(cfg['root_folder'], cfg['result_subfolder'], cfg['model_name'])
+
+    def output_predictions(self, img_files, read_img_fn, chunk_size=1, overlay_ans=False, 
+                                 ans_files=None, result_folder_pred='',
+                                 result_folder_overlay=''):
         if not os.path.isdir(result_folder_overlay):
             os.makedirs(result_folder_overlay)
+
         if not os.path.isdir(result_folder_pred):
             os.makedirs(result_folder_pred)
 
+        # Chunk image_files (memory issue)
+        img_files = [img_files[i:i+chunk_size] for i in range(0, len(img_files), chunk_size)]
+        if overlay_ans:
+            ans_files = [ans_files[i:i+chunk_size] for i in range(0, len(ans_files), chunk_size)]
 
-        # Loop thourgh images and ouput overlay 
+        # Get trained model
+        model = self.get_trained_model()
+        
+        # Loop thourgh chunks of images and ouput prediction and overlay 
         for i, g in enumerate(img_files): # loop through chunks
             print()
             print("Predicting chunck {}/{}...".format(i+1, len(img_files)))
@@ -348,22 +372,6 @@ class Task:
                 cv2.imwrite(fname, pred_img)
 
             print()
-
-
-    #-----------------------------------------------------------------------------------------------
-    # Helper functions
-    #-----------------------------------------------------------------------------------------------
-    def get_model_dir(self):
-        cfg = self.cfg
-        return os.path.join(cfg['root_folder'], cfg['model_subfolder'], cfg['model_name'])
-
-    def get_log_dir(self):
-        cfg = self.cfg
-        return os.path.join(cfg['root_folder'], cfg['log_subfolder'], cfg['model_name'])
-
-    def get_result_dir(self):
-        cfg = self.cfg
-        return os.path.join(cfg['root_folder'], cfg['result_subfolder'], cfg['model_name'])
 
 
 
