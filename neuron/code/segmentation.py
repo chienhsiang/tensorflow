@@ -227,7 +227,7 @@ class Task:
         log_dir = self.get_log_dir()
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir, exist_ok=True)
-        tb = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
+        tb = tf.keras.callbacks.TensorBoard(log_dir=log_dir, profile_batch=0)
 
         # training
         history = model.fit(train_ds, epochs=epochs, 
@@ -358,13 +358,12 @@ class Task:
 
                 if overlay_ans:
                     M = np.uint8((y[0,...,0].numpy() > 0.5) * 255.)
-                    true_color = (0,255,0)
+
                 else:
-                    M = []
-                    true_color = None
+                    M = np.zeros_like(M_pred)
 
                 # Overlayed image
-                I = data_io.overlay_mask(I, M, M_pred, true_color=true_color, pred_color=(255,0,0))
+                I = data_io.overlay_mask(I, M, M_pred)
                 fname = os.path.join(result_folder_overlay, os.path.basename(g[j]))
                 cv2.imwrite(fname, cv2.cvtColor(I, cv2.COLOR_RGB2BGR))
 

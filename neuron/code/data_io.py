@@ -155,7 +155,7 @@ def get_dataset(img_paths, mask_paths, read_img_fn=functools.partial(_get_image_
 """
 For visual inspection
 """
-def overlay_mask(I, M, M_pred, true_color=(0,255,0), pred_color=(255,0,0)):
+def overlay_mask(I, M, M_pred):
     """I, M, M_pred are uint8 numpy arrays
     """
     if I.shape[-1] == 1:
