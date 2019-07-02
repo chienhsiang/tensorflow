@@ -358,6 +358,7 @@ class Task:
 
                 if overlay_ans:
                     M = np.uint8((y[0,...,0].numpy() > 0.5) * 255.)
+                    I = I * 0
 
                 else:
                     M = np.zeros_like(M_pred)

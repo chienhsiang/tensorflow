@@ -155,17 +155,30 @@ def get_dataset(img_paths, mask_paths, read_img_fn=functools.partial(_get_image_
 """
 For visual inspection
 """
-def overlay_mask(I, M, M_pred):
+def gray2color(I, clr=(255, 0, 0)):
+    """I is uint8."""
+    clr = np.array(clr).reshape((1,1,3)) / 255.
+    I = I/ 255.
+    
+    if I.ndim==2:
+        I = np.expand_dims(I, axis=2)
+    return np.uint8(I * clr * 255)
+
+
+def overlay_mask(I, M, M_pred, ans_clr=(0, 255, 0), pred_clr=(255, 0, 0)):
     """I, M, M_pred are uint8 numpy arrays
     """
     if I.shape[-1] == 1:
         I = cv2.cvtColor(I,cv2.COLOR_GRAY2RGB)
 
-    Z = np.zeros_like(I)
-    Z[...,0] = M_pred # red for prediction
-    Z[...,1] = M # green for ground truth
+    M = gray2color(M, clr=ans_clr)
+    M_pred = gray2color(M_pred, clr=pred_clr)
+
+    # Z = np.zeros_like(I)
+    # Z[...,0] = M_pred # red for prediction
+    # Z[...,1] = M # green for ground truth
     
-    return Z
+    return cv2.addWeighted(cv2.addWeighted(I, 0.4, M, 1, 0), 1, M_pred, 1, 0)
 
 
 # def overlay_mask(I, M, M_pred, true_color=(0,255,0), pred_color=(255,0,0)):
