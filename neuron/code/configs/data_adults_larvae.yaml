@@ -20,4 +20,4 @@ test_read_cfg :
   scale: 1/255.
 
 chunk_size: 10 # number of images to predict each time (memory issue)
-output_type: overlay_pred # overlay_ans, overlay_pred
+output_type: overlay_ans # overlay_ans, overlay_pred

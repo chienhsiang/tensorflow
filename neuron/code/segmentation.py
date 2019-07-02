@@ -248,11 +248,12 @@ class Task:
         overlay_ans = True
 
         # Output folders
+        prediction_subfolder = self.cfg['prediction_subfolder']
         train_overlay = os.path.join(self.get_result_dir(), 'train_data', 'overlay_ans')
-        train_pred = os.path.join(self.get_result_dir(), 'train_data', 'predictions')
+        train_pred = os.path.join(self.get_result_dir(), 'train_data', prediction_subfolder)
 
         val_overlay = os.path.join(self.get_result_dir(), 'validation_data', 'overlay_ans')
-        val_pred = os.path.join(self.get_result_dir(), 'validation_data', 'predictions')
+        val_pred = os.path.join(self.get_result_dir(), 'validation_data', prediction_subfolder)
 
         # Output prediction
         print("Outputing training data prediction...")
@@ -276,6 +277,7 @@ class Task:
         filter_patter = test_cfg['test_data']['filter_patter']
         chunk_size = test_cfg['chunk_size']
         test_read_cfg = test_cfg['test_read_cfg']
+        prediction_subfolder = test_cfg['prediction_subfolder']
 
         overlay_ans = test_cfg['output_type'] == 'overlay_ans'
 
@@ -294,7 +296,7 @@ class Task:
                                              test_cfg['test_data']['name'], 
                                              test_cfg['output_type'])
         result_folder_pred = os.path.join(self.get_result_dir(), 
-                                          test_cfg['test_data']['name'], 'predictions')
+                                          test_cfg['test_data']['name'], prediction_subfolder)
 
         # Output prediction
         self.output_predictions(img_files, read_img_fn, chunk_size=chunk_size, overlay_ans=overlay_ans, 
@@ -318,8 +320,7 @@ class Task:
         return os.path.join(cfg['root_folder'], cfg['result_subfolder'], cfg['model_name'])
 
     def output_predictions(self, img_files, read_img_fn, chunk_size=1, overlay_ans=False, 
-                                 ans_files=None, result_folder_pred='',
-                                 result_folder_overlay=''):
+                           ans_files=None, result_folder_pred='', result_folder_overlay=''):
         if not os.path.isdir(result_folder_overlay):
             os.makedirs(result_folder_overlay)
 
