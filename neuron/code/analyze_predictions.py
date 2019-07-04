@@ -19,6 +19,9 @@ N_WORKERS = 200
 FILE_TYPE = '*.png'
 FILTER_PATTERN = None
 
+DIL_TYPE = 1 # dilation type, 1: 4-connectivity, 2: 8-connectivity
+MIN_AREA = 10 # minimal object area
+
 
 #--------------------------------------------------------------------------------------
 import sys, os, re
@@ -103,7 +106,10 @@ def find_junctions(img):
 
 
 def clean_mask(img):
-    """Skeletonize and remove fragments without branches.
+    """
+    1. Remove small objects.
+    2. Dilation the images.
+    3. Skeletonize.
     
     Inputs:
     ---------
@@ -115,9 +121,28 @@ def clean_mask(img):
     """
     assert img.dtype == np.bool, "img must be boolean."
     
+    # 1. Remove small objects.
+    img = remove_small_objects(img, min_size=MIN_AREA, connectivity=2)
+
+    # 2. Dilation the images.
+    if DIL_TYPE == 1:
+        selem = None
+
+    elif DIL_TYPE == 2:
+        selem = square(3)
+
+    else:
+        raise ValueError('DIL_TYPE can only be 1 or 2.')
+
+    img = binary_dilation(img, selem=selem)
+    
+    # 3. Skeletonize.
     sk_img = skeletonize(img)
-    j_img = find_junctions(sk_img)
-    return reconstruction(j_img, sk_img) > 0
+
+    return sk_img
+
+    # j_img = find_junctions(sk_img)
+    # return reconstruction(j_img, sk_img) > 0
 
 
 def get_img_mean_intensity(file_name):
