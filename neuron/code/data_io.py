@@ -168,6 +168,10 @@ def gray2color(I, clr=(255, 0, 0)):
 def overlay_mask(I, M, M_pred, ans_clr=(0, 255, 0), pred_clr=(255, 0, 0)):
     """I, M, M_pred are uint8 numpy arrays
     """
+    img_w = 0.8
+    ans_w = 1
+    pred_w = 1
+
     if I.shape[-1] == 1:
         I = cv2.cvtColor(I,cv2.COLOR_GRAY2RGB)
 
@@ -178,7 +182,7 @@ def overlay_mask(I, M, M_pred, ans_clr=(0, 255, 0), pred_clr=(255, 0, 0)):
     # Z[...,0] = M_pred # red for prediction
     # Z[...,1] = M # green for ground truth
     
-    return cv2.addWeighted(cv2.addWeighted(I, 0.4, M, 1, 0), 1, M_pred, 1, 0)
+    return cv2.addWeighted(cv2.addWeighted(I, img_w, M, ans_w, 0), 1, M_pred, pred_w, 0)
 
 
 # def overlay_mask(I, M, M_pred, true_color=(0,255,0), pred_color=(255,0,0)):
