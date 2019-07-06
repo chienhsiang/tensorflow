@@ -13,15 +13,17 @@ COL_ORDER = ['file_name', 'mean_intensity', 'area_true', 'n_endpoints_true',
              'dice_loss', 'area_pred', 'n_endpoints_pred']
 TO_TAKE = ['file_name', 'dice_loss', 'area_pred', 'n_endpoints_pred']
 
-PROB_THRESHOLD = 0.5
-N_WORKERS = 200
-
 FILE_TYPE = '*.png'
 FILTER_PATTERN = None
 
-DIL_TYPE = 1 # dilation type, 1: 4-connectivity, 2: 8-connectivity
-MIN_AREA = 10 # minimal object area
-
+# parameters
+PARAMS = {
+    'PROB_THRESHOLD': 0.5, # probability threhold to convert prediction to mask
+    'DIL_TYPE': 1, # dilation type, 1: 4-connectivity, 2: 8-connectivity
+    'MIN_AREA': 10,  # minimal object area
+    'PRED_ONLY': False, # whether to compute dice loss
+    'POST_PROCESSED_FOLDER': None # folder for saving y_pred after clean_mask
+    }
 
 #--------------------------------------------------------------------------------------
 import sys, os, re
@@ -41,6 +43,7 @@ from skimage.morphology import square
 from skimage.morphology import remove_small_objects
 import skimage.filters.rank as rank
 
+import multiprocessing as mp
 from multiprocessing import Pool
 import time
 
@@ -122,13 +125,13 @@ def clean_mask(img):
     assert img.dtype == np.bool, "img must be boolean."
     
     # 1. Remove small objects.
-    img = remove_small_objects(img, min_size=MIN_AREA, connectivity=2)
+    img = remove_small_objects(img, min_size=PARAMS['MIN_AREA'], connectivity=2)
 
     # 2. Dilation the images.
-    if DIL_TYPE == 1:
+    if PARAMS['DIL_TYPE'] == 1:
         selem = None
 
-    elif DIL_TYPE == 2:
+    elif PARAMS['DIL_TYPE'] == 2:
         selem = square(3)
 
     else:
@@ -183,76 +186,101 @@ def get_results(path_pair):
 
     fname = os.path.basename(y_pred_path)
 
-    # Get path to the input image
-    cfg = get_common_configs()
-    dataset_dir = os.path.dirname(os.path.dirname(y_true_path))
-    img_file = os.path.join(dataset_dir, cfg['img_subfolder'], fname)
-
     y_pred = skimage.io.imread(path_pair[1]) / 255.
-    y_pred = y_pred > PROB_THRESHOLD
-    
-    y_true = skimage.io.imread(path_pair[0]) / 255.
-    if y_true.shape != y_pred.shape:
-        y_true = resize(y_true, (y_pred.shape[1], y_pred.shape[0]))
-     
-    DL = dice_loss(y_true, y_pred.astype(np.float64))
+    y_pred = y_pred > PARAMS['PROB_THRESHOLD']
+
+    pred_only = y_true_path is None
+    if not pred_only: # compute y_true related results
+        # Get path to the input image
+        cfg = get_common_configs()
+        dataset_dir = os.path.dirname(os.path.dirname(y_true_path))
+        img_file = os.path.join(dataset_dir, cfg['img_subfolder'], fname)
+
+        y_true = skimage.io.imread(path_pair[0]) / 255.
+        if y_true.shape != y_pred.shape:
+            y_true = resize(y_true, (y_pred.shape[1], y_pred.shape[0]))
+
+        DL = dice_loss(y_true, y_pred.astype(np.float64))
+
+        y_true_results = {
+            'mean_intensity': get_img_mean_intensity(img_file),
+            'dice_loss': DL, 
+            'area_true': y_true.sum(),
+            'n_endpoints_true': get_endpoint_numbers(y_true > 0) 
+            }
 
     # Clean up y_pred before computing area and endpoint numbers
     y_pred = clean_mask(y_pred)
 
     results = {'file_name': fname,
-               'mean_intensity': get_img_mean_intensity(img_file),
-               'dice_loss': DL, 
-               'area_true': y_true.sum(),
                'area_pred': y_pred.sum(),
-               'n_endpoints_true': get_endpoint_numbers(y_true > 0),
                'n_endpoints_pred': get_endpoint_numbers(y_pred)
                }
+    if not pred_only:
+        results = {**results, **y_true_results}
+
+    if PARAMS['POST_PROCESSED_FOLDER'] is not None: # save y_pred
+        pred_parent_folder = os.path.dirname(os.path.dirname(y_pred_path))
+        post_proc_dir = os.path.join(pred_parent_folder, PARAMS['POST_PROCESSED_FOLDER'])
+        if not os.path.exists(post_proc_dir):
+            os.makedirs(post_proc_dir, exist_ok=False)
+        img_path = os.path.join(post_proc_dir, fname)
+        skimage.io.imsave(img_path, y_pred.astype(np.uint8) * 255)
  
     return results
 
 
+def init_pool(params):
+    """Send the modified PARAMS to children processes"""
+    global PARAMS
+    PARAMS = params    
+
+
 def get_model_results(dataset, model_name):
     print("Retrieving results of {}...".format(model_name))
-    
+
     # Common paths
     cfg = get_common_configs()
     root_path = cfg['root_folder']
-    data_root = os.path.join(root_path, cfg['data_subfoler'])
     result_root = os.path.join(root_path, cfg['result_subfolder'])
-    img_dir = os.path.join(data_root, dataset, cfg['img_subfolder'])
-
-    y_true_dir = os.path.join(data_root, dataset, cfg['mask_subfolder'])
     y_pred_dir = os.path.join(result_root, model_name, dataset, cfg['prediction_subfolder'])
-    
-    y_true_paths = get_filenames(y_true_dir, FILE_TYPE, FILTER_PATTERN)
     y_pred_paths = get_filenames(y_pred_dir, FILE_TYPE, FILTER_PATTERN)
-    # print()
-    
-    # check y_true_paths and y_pred_paths have the same file names
-    assert [os.path.basename(f) for f in y_true_paths] == \
-           [os.path.basename(f) for f in y_pred_paths], 'y_true and y_pred must have same file names'
+    n_tasks = len(y_pred_paths)
+
+    if not PARAMS['PRED_ONLY']: # get true data
+        data_root = os.path.join(root_path, cfg['data_subfoler'])
+        img_dir = os.path.join(data_root, dataset, cfg['img_subfolder'])
+        y_true_dir = os.path.join(data_root, dataset, cfg['mask_subfolder'])
+        y_true_paths = get_filenames(y_true_dir, FILE_TYPE, FILTER_PATTERN)
+
+        # check y_true_paths and y_pred_paths have the same file names
+        assert len(y_true_paths) > 0, 'No y_true files found.'
+        assert [os.path.basename(f) for f in y_true_paths] == \
+               [os.path.basename(f) for f in y_pred_paths], 'y_true and y_pred must have same file names'
+    else:
+        y_true_paths = [None] * n_tasks
     
     path_pairs = zip(y_true_paths, y_pred_paths)
-    n_tasks = len(y_pred_paths)
-    
-    # results = []
-    # for i, r in enumerate(map(get_results, path_pairs), 1):
-    #     results.append(r)
-    #     print("  Done {}/{}".format(i, n_tasks), end='\r')
-            
-    with Pool(N_WORKERS) as p:
-        results = []
+
+    results = []
+    with Pool(mp.cpu_count(), initializer=init_pool, initargs=(PARAMS,)) as p:
         for i, r in enumerate(p.imap(get_results, path_pairs), 1):
             results.append(r)
             print("  Done {}/{}".format(i, n_tasks), end='\r')
+
+    ## None parallel        
+    # for i, r in enumerate(map(get_results, path_pairs), 1):
+    #     results.append(r)
+    #     print("  Done {}/{}".format(i, n_tasks), end='\r')
     
     return results
 
 
 def results_to_dataframe(results, tag='', **kwargs):   
     df = pd.DataFrame(results)
-    df = df[COL_ORDER]
+
+    col_order = [c for c in COL_ORDER if c in list(df)]
+    df = df[col_order]
 
     # Add tag to column names
     if tag is not '':
@@ -290,6 +318,7 @@ def main(dataset, model_names, tags=None, output_csv=None):
 
     if output_csv:
         df.to_csv(output_csv, index=False)
+        print("Save output to " + output_csv)
 
     return df
 
